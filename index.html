@@ -73,6 +73,12 @@
   const scoreEl = document.getElementById('score');
   const bestEl = document.getElementById('bestVal');
 
+  // Avatar image used as the bouncing ball
+  const avatar = new Image();
+  avatar.src = 'avatar.png';
+  let avatarReady = false;
+  avatar.onload = () => { avatarReady = true; };
+
   let W = 0, H = 0;
   function resize() {
     W = canvas.width = window.innerWidth * devicePixelRatio;
@@ -93,7 +99,7 @@
     y: VH() / 3,
     vx: 3,
     vy: 0,
-    r: 36,
+    r: 55,
     hue: 200,
     gravity: 0.45,
     bounce: 0.92,
@@ -270,33 +276,30 @@
     ctx.arc(0, 0, ball.r * 2.2, 0, Math.PI * 2);
     ctx.fill();
 
-    // Ball body
-    const bodyGrad = ctx.createRadialGradient(-ball.r * 0.3, -ball.r * 0.3, ball.r * 0.1, 0, 0, ball.r);
-    bodyGrad.addColorStop(0, `hsl(${ball.hue}, 100%, 80%)`);
-    bodyGrad.addColorStop(1, `hsl(${ball.hue}, 90%, 50%)`);
-    ctx.fillStyle = bodyGrad;
+    // Circular clip + avatar image (or fallback colored ball)
+    ctx.save();
     ctx.beginPath();
     ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.closePath();
+    ctx.clip();
 
-    // Highlight
-    ctx.fillStyle = 'rgba(255,255,255,0.5)';
-    ctx.beginPath();
-    ctx.arc(-ball.r * 0.35, -ball.r * 0.35, ball.r * 0.22, 0, Math.PI * 2);
-    ctx.fill();
+    if (avatarReady) {
+      const size = ball.r * 2;
+      ctx.drawImage(avatar, -ball.r, -ball.r, size, size);
+    } else {
+      const bodyGrad = ctx.createRadialGradient(-ball.r * 0.3, -ball.r * 0.3, ball.r * 0.1, 0, 0, ball.r);
+      bodyGrad.addColorStop(0, `hsl(${ball.hue}, 100%, 80%)`);
+      bodyGrad.addColorStop(1, `hsl(${ball.hue}, 90%, 50%)`);
+      ctx.fillStyle = bodyGrad;
+      ctx.fillRect(-ball.r, -ball.r, ball.r * 2, ball.r * 2);
+    }
+    ctx.restore();
 
-    // Eyes (kid-friendly face)
-    ctx.fillStyle = '#1a1a1a';
+    // Colored ring around the avatar
+    ctx.strokeStyle = `hsl(${ball.hue}, 90%, 65%)`;
+    ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.arc(-ball.r * 0.25, -ball.r * 0.05, ball.r * 0.09, 0, Math.PI * 2);
-    ctx.arc( ball.r * 0.25, -ball.r * 0.05, ball.r * 0.09, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Smile
-    ctx.strokeStyle = '#1a1a1a';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(0, ball.r * 0.18, ball.r * 0.28, 0.1 * Math.PI, 0.9 * Math.PI);
+    ctx.arc(0, 0, ball.r - 1, 0, Math.PI * 2);
     ctx.stroke();
 
     ctx.restore();
