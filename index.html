@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Circle the Ball!</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #fff;
+    cursor: none;
+  }
+  canvas { display: block; }
+  #hud {
+    position: fixed;
+    top: 16px;
+    left: 16px;
+    pointer-events: none;
+    user-select: none;
+  }
+  #hud h1 {
+    font-size: 18px;
+    font-weight: 600;
+    opacity: 0.7;
+    letter-spacing: 0.5px;
+  }
+  #score {
+    font-size: 56px;
+    font-weight: 800;
+    line-height: 1;
+    margin-top: 4px;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  }
+  #hint {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 16px;
+    opacity: 0.6;
+    pointer-events: none;
+    user-select: none;
+    text-align: center;
+  }
+  #best {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    font-size: 14px;
+    opacity: 0.6;
+    user-select: none;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud">
+  <h1>LOOPS</h1>
+  <div id="score">0</div>
+</div>
+<div id="best">Best: <span id="bestVal">0</span></div>
+<div id="hint">Move your mouse in circles around the bouncing ball!</div>
+
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const bestEl = document.getElementById('bestVal');
+
+  let W = 0, H = 0;
+  function resize() {
+    W = canvas.width = window.innerWidth * devicePixelRatio;
+    H = canvas.height = window.innerHeight * devicePixelRatio;
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  const VW = () => window.innerWidth;
+  const VH = () => window.innerHeight;
+
+  // Ball state
+  const ball = {
+    x: VW() / 2,
+    y: VH() / 3,
+    vx: 3,
+    vy: 0,
+    r: 36,
+    hue: 200,
+    gravity: 0.45,
+    bounce: 0.92,
+    squash: 0,
+  };
+
+  // Mouse state
+  const mouse = {
+    x: VW() / 2,
+    y: VH() / 2,
+    has: false,
+    trail: [],
+  };
+
+  // Tracking circular motion
+  let prevAngle = null;
+  let accumAngle = 0;
+  let score = 0;
+  let best = parseInt(localStorage.getItem('ballCircleBest') || '0', 10);
+  bestEl.textContent = best;
+
+  // Particle effects
+  const particles = [];
+  function burst(x, y, hue) {
+    for (let i = 0; i < 28; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const s = 2 + Math.random() * 6;
+      particles.push({
+        x, y,
+        vx: Math.cos(a) * s,
+        vy: Math.sin(a) * s,
+        life: 1,
+        hue: hue + (Math.random() * 40 - 20),
+        size: 3 + Math.random() * 4,
+      });
+    }
+  }
+
+  window.addEventListener('mousemove', (e) => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+    mouse.has = true;
+    mouse.trail.push({ x: mouse.x, y: mouse.y, t: performance.now() });
+    if (mouse.trail.length > 40) mouse.trail.shift();
+  });
+
+  // Touch support (so it works on tablets/phones too)
+  window.addEventListener('touchmove', (e) => {
+    const t = e.touches[0];
+    if (!t) return;
+    mouse.x = t.clientX;
+    mouse.y = t.clientY;
+    mouse.has = true;
+    mouse.trail.push({ x: mouse.x, y: mouse.y, t: performance.now() });
+    if (mouse.trail.length > 40) mouse.trail.shift();
+    e.preventDefault();
+  }, { passive: false });
+
+  function tick() {
+    const w = VW(), h = VH();
+
+    // Physics
+    ball.vy += ball.gravity;
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+
+    // Wall collisions
+    if (ball.x - ball.r < 0) { ball.x = ball.r; ball.vx = -ball.vx * ball.bounce; ball.squash = 0.4; }
+    if (ball.x + ball.r > w) { ball.x = w - ball.r; ball.vx = -ball.vx * ball.bounce; ball.squash = 0.4; }
+    if (ball.y - ball.r < 0) { ball.y = ball.r; ball.vy = -ball.vy * ball.bounce; }
+    if (ball.y + ball.r > h) {
+      ball.y = h - ball.r;
+      ball.vy = -ball.vy * ball.bounce;
+      ball.squash = 0.5;
+      // Add a little random horizontal kick so it stays interesting
+      ball.vx += (Math.random() - 0.5) * 1.2;
+      // Keep ball bouncing forever — give it minimum upward speed
+      if (Math.abs(ball.vy) < 8) ball.vy = -(10 + Math.random() * 4);
+    }
+
+    // Clamp horizontal speed
+    ball.vx = Math.max(-7, Math.min(7, ball.vx));
+    ball.squash *= 0.85;
+
+    // Track mouse angle around ball
+    if (mouse.has) {
+      const dx = mouse.x - ball.x;
+      const dy = mouse.y - ball.y;
+      const dist = Math.hypot(dx, dy);
+      const angle = Math.atan2(dy, dx);
+
+      // Only count if mouse is close enough to make "circling" meaningful
+      // and not too close (must actually loop around it)
+      const validRing = dist > ball.r + 10 && dist < ball.r + 220;
+
+      if (prevAngle !== null && validRing) {
+        let delta = angle - prevAngle;
+        if (delta > Math.PI) delta -= Math.PI * 2;
+        if (delta < -Math.PI) delta += Math.PI * 2;
+        accumAngle += delta;
+      }
+      prevAngle = validRing ? angle : null;
+
+      // Each full loop (2π) = 1 point
+      while (Math.abs(accumAngle) >= Math.PI * 2) {
+        score++;
+        scoreEl.textContent = score;
+        if (score > best) {
+          best = score;
+          bestEl.textContent = best;
+          localStorage.setItem('ballCircleBest', String(best));
+        }
+        ball.hue = (ball.hue + 40) % 360;
+        burst(ball.x, ball.y, ball.hue);
+        // Give the ball a fun extra bounce as reward
+        ball.vy -= 4;
+        accumAngle += accumAngle > 0 ? -Math.PI * 2 : Math.PI * 2;
+      }
+    }
+
+    // Update particles
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.15;
+      p.life -= 0.018;
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    // Draw
+    ctx.clearRect(0, 0, w, h);
+
+    // Trail line
+    if (mouse.trail.length > 1) {
+      const now = performance.now();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      for (let i = 1; i < mouse.trail.length; i++) {
+        const a = mouse.trail[i - 1];
+        const b = mouse.trail[i];
+        const age = (now - b.t) / 600;
+        const alpha = Math.max(0, 1 - age);
+        ctx.strokeStyle = `hsla(${ball.hue}, 90%, 65%, ${alpha * 0.7})`;
+        ctx.lineWidth = 4 * alpha + 1;
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+    }
+
+    // Particles
+    for (const p of particles) {
+      ctx.fillStyle = `hsla(${p.hue}, 90%, 65%, ${p.life})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Ball with squash effect
+    const sq = 1 + ball.squash * 0.4;
+    const stretch = 1 - ball.squash * 0.2;
+    ctx.save();
+    ctx.translate(ball.x, ball.y);
+    ctx.scale(sq, stretch);
+
+    // Glow
+    const grad = ctx.createRadialGradient(0, 0, 4, 0, 0, ball.r * 2.2);
+    grad.addColorStop(0, `hsla(${ball.hue}, 100%, 75%, 0.6)`);
+    grad.addColorStop(1, `hsla(${ball.hue}, 100%, 50%, 0)`);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(0, 0, ball.r * 2.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Ball body
+    const bodyGrad = ctx.createRadialGradient(-ball.r * 0.3, -ball.r * 0.3, ball.r * 0.1, 0, 0, ball.r);
+    bodyGrad.addColorStop(0, `hsl(${ball.hue}, 100%, 80%)`);
+    bodyGrad.addColorStop(1, `hsl(${ball.hue}, 90%, 50%)`);
+    ctx.fillStyle = bodyGrad;
+    ctx.beginPath();
+    ctx.arc(0, 0, ball.r, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Highlight
+    ctx.fillStyle = 'rgba(255,255,255,0.5)';
+    ctx.beginPath();
+    ctx.arc(-ball.r * 0.35, -ball.r * 0.35, ball.r * 0.22, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eyes (kid-friendly face)
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath();
+    ctx.arc(-ball.r * 0.25, -ball.r * 0.05, ball.r * 0.09, 0, Math.PI * 2);
+    ctx.arc( ball.r * 0.25, -ball.r * 0.05, ball.r * 0.09, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Smile
+    ctx.strokeStyle = '#1a1a1a';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(0, ball.r * 0.18, ball.r * 0.28, 0.1 * Math.PI, 0.9 * Math.PI);
+    ctx.stroke();
+
+    ctx.restore();
+
+    // Custom cursor (a small ring)
+    if (mouse.has) {
+      ctx.strokeStyle = `hsla(${ball.hue}, 90%, 70%, 0.9)`;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(mouse.x, mouse.y, 10, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = `hsla(${ball.hue}, 90%, 70%, 0.9)`;
+      ctx.beginPath();
+      ctx.arc(mouse.x, mouse.y, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    requestAnimationFrame(tick);
+  }
+  tick();
+})();
+</script>
+</body>
+</html>
