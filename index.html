@@ -46,6 +46,57 @@
     user-select: none;
     text-align: center;
   }
+  #startOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.92);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    cursor: pointer;
+    transition: opacity 0.4s ease;
+  }
+  #startOverlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+  #startCard {
+    text-align: center;
+    max-width: 420px;
+    padding: 32px 28px;
+  }
+  #startTitle {
+    font-size: 44px;
+    font-weight: 800;
+    margin-bottom: 14px;
+    background: linear-gradient(135deg, #f59e0b, #ec4899);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  #startSub {
+    font-size: 16px;
+    opacity: 0.8;
+    line-height: 1.5;
+    margin-bottom: 24px;
+  }
+  #startBtn {
+    font-size: 20px;
+    font-weight: 700;
+    padding: 14px 36px;
+    border-radius: 999px;
+    border: none;
+    background: linear-gradient(135deg, #f59e0b, #ec4899);
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(236, 72, 153, 0.4);
+    transition: transform 0.15s ease;
+  }
+  #startBtn:hover { transform: scale(1.05); }
+  #startBtn:active { transform: scale(0.97); }
   #animalLabel {
     position: fixed;
     top: 50%;
@@ -81,6 +132,13 @@
 </div>
 <div id="best">Best: <span id="bestVal">0</span></div>
 <div id="hint">Move your mouse in circles around the bouncing ball!</div>
+<div id="startOverlay">
+  <div id="startCard">
+    <div id="startTitle">Circle the Ball!</div>
+    <div id="startSub">Move your mouse in circles around the bouncing face.<br/>Each full loop = 1 point and a funny animal sound.</div>
+    <button id="startBtn">Tap to play</button>
+  </div>
+</div>
 
 <script>
 (() => {
@@ -127,6 +185,24 @@
   const animalLabelEl = document.createElement('div');
   animalLabelEl.id = 'animalLabel';
   document.body.appendChild(animalLabelEl);
+
+  // Start overlay — also primes audio for Safari/iOS autoplay policies
+  const startOverlay = document.getElementById('startOverlay');
+  function dismissStart() {
+    if (!startOverlay || startOverlay.classList.contains('hidden')) return;
+    startOverlay.classList.add('hidden');
+    // Prime each audio element so later .play() doesn't get blocked
+    for (const a of animalAudio) {
+      const old = a.volume;
+      a.volume = 0;
+      a.play().then(() => { a.pause(); a.currentTime = 0; a.volume = old; }).catch(() => { a.volume = old; });
+    }
+    setTimeout(() => startOverlay && startOverlay.remove(), 500);
+  }
+  if (startOverlay) {
+    startOverlay.addEventListener('click', dismissStart);
+    startOverlay.addEventListener('touchstart', dismissStart, { passive: true });
+  }
   let labelTimer = null;
   function flashAnimalLabel(name) {
     animalLabelEl.textContent = name + '!';
