@@ -14,3 +14,30 @@ Just open `index.html` in any browser, or play it online once GitHub Pages is en
 - Best score is saved in `localStorage`.
 
 Works on desktop (mouse) and touch devices (finger drag).
+
+---
+
+# IT Project Tracker (`tracker.html`)
+
+A phone-first web app for the movement's IT team to list and manage all projects
+and apps across segments (Apps & Web, Data & Analytics, Infra & Security, Comms,
+Internal Tools, …).
+
+## Use it
+
+Open `tracker.html` on your phone (or add it to your home screen for an app-like
+feel). Everything is saved locally on the device via `localStorage` — no server,
+no accounts.
+
+## Features
+
+- List all projects grouped by segment, with live counts.
+- Per-project: segment, status (Idea / Active / On hold / Done), priority, owner,
+  a link (repo / staging / doc) and notes.
+- Add, edit and delete projects from a bottom sheet.
+- Task checklist per project with a progress bar.
+- Search across names, notes, owners and tasks; filter by segment.
+- Header stats: total projects, active projects, open tasks.
+
+It ships with a few example projects so you can see the layout — delete them and
+add your own.

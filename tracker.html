@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0f172a" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<title>Movement IT — Project Tracker</title>
+<style>
+  :root {
+    --bg: #0b1120;
+    --bg2: #0f172a;
+    --card: #1e293b;
+    --card2: #273449;
+    --line: #334155;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --accent: #ef4444;
+    --accent2: #f97316;
+    --green: #22c55e;
+    --blue: #3b82f6;
+    --amber: #f59e0b;
+    --purple: #a855f7;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bot: env(safe-area-inset-bottom, 0px);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+  body { display: flex; flex-direction: column; overflow: hidden; }
+
+  /* ---------- Header ---------- */
+  header {
+    padding: calc(var(--safe-top) + 14px) 16px 12px;
+    background: linear-gradient(180deg, #111a2e 0%, var(--bg2) 100%);
+    border-bottom: 1px solid var(--line);
+    position: relative;
+    z-index: 5;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .logo {
+    width: 34px; height: 34px; border-radius: 9px; flex: none;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: grid; place-items: center; font-size: 18px;
+    box-shadow: 0 4px 14px rgba(239,68,68,0.35);
+  }
+  .brand h1 { font-size: 17px; font-weight: 700; letter-spacing: 0.2px; }
+  .brand p { font-size: 11.5px; color: var(--muted); margin-top: 1px; }
+
+  .stats { display: flex; gap: 8px; margin-top: 14px; }
+  .stat {
+    flex: 1; background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 9px 10px; text-align: center;
+  }
+  .stat b { display: block; font-size: 20px; font-weight: 800; line-height: 1; }
+  .stat span { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.4px; }
+
+  /* ---------- Search + filters ---------- */
+  .toolbar { padding: 12px 16px 4px; }
+  .search {
+    width: 100%; background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 11px 14px; color: var(--text); font-size: 15px;
+  }
+  .search::placeholder { color: var(--muted); }
+  .chips {
+    display: flex; gap: 7px; overflow-x: auto; padding: 11px 16px 4px;
+    scrollbar-width: none;
+  }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip {
+    flex: none; padding: 7px 13px; border-radius: 999px; font-size: 13px; font-weight: 600;
+    background: var(--card); border: 1px solid var(--line); color: var(--muted);
+    white-space: nowrap; cursor: pointer; transition: .15s;
+  }
+  .chip.active { background: var(--text); color: #0b1120; border-color: var(--text); }
+
+  /* ---------- List ---------- */
+  main { flex: 1; overflow-y: auto; padding: 8px 16px 120px; -webkit-overflow-scrolling: touch; }
+  .seg-head {
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px;
+    color: var(--muted); margin: 16px 2px 8px; display: flex; align-items: center; gap: 8px;
+  }
+  .seg-head .count { color: var(--text); background: var(--card); border: 1px solid var(--line);
+    border-radius: 999px; padding: 1px 8px; font-size: 11px; }
+
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    padding: 13px 14px; margin-bottom: 10px; position: relative; overflow: hidden;
+  }
+  .card::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    background: var(--barcolor, var(--muted));
+  }
+  .card .top { display: flex; align-items: flex-start; gap: 10px; }
+  .card h3 { font-size: 15.5px; font-weight: 700; line-height: 1.25; flex: 1; word-break: break-word; }
+  .card .desc { font-size: 13px; color: var(--muted); margin-top: 5px; line-height: 1.4; word-break: break-word; }
+  .card .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; }
+  .tag {
+    font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px;
+    background: var(--card2); color: var(--muted); border: 1px solid var(--line);
+  }
+  .badge {
+    font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .badge .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .owner { font-size: 11.5px; color: var(--muted); margin-left: auto; display:flex; align-items:center; gap:4px;}
+
+  .progress-wrap { margin-top: 11px; }
+  .progress-row { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-bottom: 5px; }
+  .bar { height: 6px; background: var(--card2); border-radius: 999px; overflow: hidden; }
+  .bar > span { display: block; height: 100%; background: linear-gradient(90deg, var(--green), #4ade80); border-radius: 999px; transition: width .3s; }
+
+  .empty { text-align: center; color: var(--muted); padding: 60px 20px; }
+  .empty .big { font-size: 44px; margin-bottom: 12px; }
+  .empty p { font-size: 14px; line-height: 1.5; }
+
+  /* ---------- FAB ---------- */
+  .fab {
+    position: fixed; right: 18px; bottom: calc(20px + var(--safe-bot)); z-index: 20;
+    width: 58px; height: 58px; border-radius: 18px; border: none;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff; font-size: 30px; font-weight: 300; line-height: 1;
+    box-shadow: 0 8px 24px rgba(239,68,68,0.45); cursor: pointer;
+    display: grid; place-items: center;
+  }
+  .fab:active { transform: scale(0.93); }
+
+  /* ---------- Sheet / Modal ---------- */
+  .scrim {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 40;
+    opacity: 0; pointer-events: none; transition: opacity .25s; backdrop-filter: blur(2px);
+  }
+  .scrim.open { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+    background: var(--bg2); border-top-left-radius: 22px; border-top-right-radius: 22px;
+    border-top: 1px solid var(--line);
+    transform: translateY(100%); transition: transform .3s cubic-bezier(.32,.72,0,1);
+    max-height: 92vh; display: flex; flex-direction: column;
+    padding-bottom: var(--safe-bot);
+  }
+  .sheet.open { transform: translateY(0); }
+  .grabber { width: 40px; height: 4px; border-radius: 999px; background: var(--line); margin: 10px auto 4px; flex: none; }
+  .sheet-head { display: flex; align-items: center; padding: 6px 16px 12px; border-bottom: 1px solid var(--line); }
+  .sheet-head h2 { font-size: 17px; font-weight: 700; flex: 1; }
+  .sheet-head button { background: none; border: none; color: var(--muted); font-size: 15px; font-weight: 600; cursor: pointer; padding: 6px; }
+  .sheet-body { overflow-y: auto; padding: 16px; -webkit-overflow-scrolling: touch; }
+
+  label.fld { display: block; margin-bottom: 15px; }
+  label.fld span { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .in {
+    width: 100%; background: var(--card); border: 1px solid var(--line); border-radius: 11px;
+    padding: 12px 13px; color: var(--text); font-size: 15px; font-family: inherit;
+  }
+  .in:focus { outline: none; border-color: var(--accent); }
+  textarea.in { resize: vertical; min-height: 70px; }
+  .seg-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .opt {
+    padding: 11px; border-radius: 11px; border: 1px solid var(--line); background: var(--card);
+    font-size: 13.5px; font-weight: 600; text-align: center; cursor: pointer; color: var(--muted);
+    transition: .12s;
+  }
+  .opt.sel { color: #fff; border-color: transparent; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .btn-primary {
+    width: 100%; padding: 14px; border-radius: 13px; border: none; font-size: 15.5px; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; cursor: pointer;
+    margin-top: 4px;
+  }
+  .btn-primary:active { transform: scale(0.99); }
+  .btn-danger {
+    width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #7f1d1d; font-size: 14px; font-weight: 600;
+    background: rgba(127,29,29,0.25); color: #fca5a5; cursor: pointer; margin-top: 10px;
+  }
+
+  /* ---------- Detail sheet task list ---------- */
+  .task {
+    display: flex; align-items: center; gap: 11px; padding: 11px 2px; border-bottom: 1px solid var(--line);
+  }
+  .task:last-child { border-bottom: none; }
+  .check {
+    width: 22px; height: 22px; border-radius: 7px; border: 2px solid var(--line); flex: none;
+    display: grid; place-items: center; cursor: pointer; color: transparent; font-size: 13px; font-weight: 800;
+  }
+  .task.done .check { background: var(--green); border-color: var(--green); color: #05240f; }
+  .task.done .tx { color: var(--muted); text-decoration: line-through; }
+  .tx { flex: 1; font-size: 14px; word-break: break-word; }
+  .task .del { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 2px 6px; }
+  .add-task { display: flex; gap: 8px; margin-top: 12px; }
+  .add-task .in { flex: 1; }
+  .add-task button { background: var(--card2); border: 1px solid var(--line); color: var(--text); border-radius: 11px; padding: 0 16px; font-size: 22px; cursor: pointer; }
+
+  .detail-meta { display: flex; flex-wrap: wrap; gap: 7px; margin: 4px 0 16px; }
+  .section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin: 18px 0 4px; }
+  .link-row { display:flex; gap:10px; margin-top: 14px; }
+  .link-row button { flex:1; padding: 11px; border-radius: 11px; border: 1px solid var(--line); background: var(--card); color: var(--text); font-size: 13.5px; font-weight: 600; cursor: pointer; }
+
+  .toast {
+    position: fixed; bottom: calc(90px + var(--safe-bot)); left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--text); color: #0b1120; padding: 10px 18px; border-radius: 999px; font-size: 13.5px; font-weight: 600;
+    z-index: 100; opacity: 0; transition: .25s; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="logo">✊</div>
+    <div>
+      <h1>IT Project Tracker</h1>
+      <p>Movement tech team · apps &amp; segments</p>
+    </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><b id="stTotal">0</b><span>Projects</span></div>
+    <div class="stat"><b id="stActive" style="color:var(--green)">0</b><span>Active</span></div>
+    <div class="stat"><b id="stTasks" style="color:var(--amber)">0</b><span>Open tasks</span></div>
+  </div>
+</header>
+
+<div class="toolbar">
+  <input id="search" class="search" placeholder="Search projects…" autocomplete="off" />
+</div>
+<div class="chips" id="chips"></div>
+
+<main id="list"></main>
+
+<button class="fab" id="fab" aria-label="Add project">+</button>
+
+<!-- Add / Edit sheet -->
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="editSheet">
+  <div class="grabber"></div>
+  <div class="sheet-head">
+    <button id="editCancel">Cancel</button>
+    <h2 id="editTitle" style="text-align:center">New Project</h2>
+    <button id="editSave" style="color:var(--accent)">Save</button>
+  </div>
+  <div class="sheet-body">
+    <label class="fld"><span>Project / App name</span>
+      <input id="fName" class="in" placeholder="e.g. Volunteer Mobile App" /></label>
+
+    <label class="fld"><span>Segment</span>
+      <div class="seg-grid" id="fSegments"></div></label>
+
+    <div class="row2">
+      <label class="fld"><span>Status</span>
+        <div id="fStatus"></div></label>
+      <label class="fld"><span>Priority</span>
+        <div id="fPriority"></div></label>
+    </div>
+
+    <label class="fld"><span>Owner / Lead</span>
+      <input id="fOwner" class="in" placeholder="Who's responsible?" /></label>
+
+    <label class="fld"><span>Link (repo / staging / doc)</span>
+      <input id="fLink" class="in" placeholder="https://…" inputmode="url" /></label>
+
+    <label class="fld"><span>Notes</span>
+      <textarea id="fDesc" class="in" placeholder="What is this project about?"></textarea></label>
+
+    <button class="btn-danger" id="editDelete" style="display:none">Delete project</button>
+  </div>
+</div>
+
+<!-- Detail sheet -->
+<div class="sheet" id="detailSheet">
+  <div class="grabber"></div>
+  <div class="sheet-head">
+    <button id="detailClose">Close</button>
+    <h2 style="text-align:center">Project</h2>
+    <button id="detailEdit" style="color:var(--accent)">Edit</button>
+  </div>
+  <div class="sheet-body" id="detailBody"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+
+/* ---------------- Config ---------------- */
+const SEGMENTS = [
+  { id: "apps",     label: "Apps & Web",     color: "#3b82f6", icon: "📱" },
+  { id: "data",     label: "Data & Analytics", color: "#a855f7", icon: "📊" },
+  { id: "infra",    label: "Infra & Security", color: "#22c55e", icon: "🛡️" },
+  { id: "comms",    label: "Comms & Outreach", color: "#f59e0b", icon: "📣" },
+  { id: "internal", label: "Internal Tools",  color: "#06b6d4", icon: "🧰" },
+  { id: "other",    label: "Other",           color: "#94a3b8", icon: "📦" },
+];
+const STATUSES = [
+  { id: "idea",    label: "Idea",     color: "#94a3b8" },
+  { id: "active",  label: "Active",   color: "#22c55e" },
+  { id: "hold",    label: "On hold",  color: "#f59e0b" },
+  { id: "done",    label: "Done",     color: "#3b82f6" },
+];
+const PRIORITIES = [
+  { id: "low",    label: "Low",    color: "#64748b" },
+  { id: "med",    label: "Medium", color: "#f59e0b" },
+  { id: "high",   label: "High",   color: "#ef4444" },
+];
+const STORE_KEY = "movement_it_projects_v1";
+
+const segMap = Object.fromEntries(SEGMENTS.map(s => [s.id, s]));
+const statMap = Object.fromEntries(STATUSES.map(s => [s.id, s]));
+const priMap = Object.fromEntries(PRIORITIES.map(p => [p.id, p]));
+
+/* ---------------- State ---------------- */
+let projects = load();
+let filter = "all";
+let query = "";
+let editingId = null;
+let viewingId = null;
+let draft = null;
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {}
+  return seed();
+}
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(projects)); } catch (e) {}
+}
+function uid() { return "p" + Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4); }
+
+function seed() {
+  return [
+    { id: uid(), name: "Volunteer Mobile App", segment: "apps", status: "active", priority: "high",
+      owner: "Field team", link: "", desc: "Sign-up, shift scheduling and check-in for volunteers.",
+      tasks: [ t("Push notifications", true), t("Offline mode"), t("iOS TestFlight build") ] },
+    { id: uid(), name: "Voter Data Dashboard", segment: "data", status: "active", priority: "high",
+      owner: "Analytics", link: "", desc: "Turnout modelling and canvassing heatmaps.",
+      tasks: [ t("Import district CSVs", true), t("Live turnout widget"), t("Access controls") ] },
+    { id: uid(), name: "Campaign Website", segment: "apps", status: "active", priority: "med",
+      owner: "Web", link: "", desc: "Public site: manifesto, events, donations.",
+      tasks: [ t("Donation flow", true), t("Multi-language", true), t("Accessibility audit") ] },
+    { id: uid(), name: "Secure Comms / VPN", segment: "infra", status: "hold", priority: "high",
+      owner: "Security", link: "", desc: "Hardened chat + VPN for organisers.",
+      tasks: [ t("Threat model"), t("Roll out to leads") ] },
+    { id: uid(), name: "Newsletter Automation", segment: "comms", status: "idea", priority: "low",
+      owner: "Comms", link: "", desc: "Segmented email + SMS blasts.",
+      tasks: [ t("Pick provider") ] },
+    { id: uid(), name: "Internal Task Board", segment: "internal", status: "done", priority: "med",
+      owner: "IT", link: "", desc: "This tracker 🙂",
+      tasks: [ t("Ship v1", true) ] },
+  ];
+}
+function t(text, done) { return { id: uid(), text, done: !!done }; }
+
+/* ---------------- Rendering ---------------- */
+const $ = id => document.getElementById(id);
+
+function render() {
+  renderStats();
+  renderChips();
+  renderList();
+}
+
+function renderStats() {
+  const active = projects.filter(p => p.status === "active").length;
+  const openTasks = projects.reduce((n, p) => n + p.tasks.filter(t => !t.done).length, 0);
+  $("stTotal").textContent = projects.length;
+  $("stActive").textContent = active;
+  $("stTasks").textContent = openTasks;
+}
+
+function renderChips() {
+  const box = $("chips");
+  const counts = { all: projects.length };
+  SEGMENTS.forEach(s => counts[s.id] = projects.filter(p => p.segment === s.id).length);
+  const items = [{ id: "all", label: "All" }, ...SEGMENTS.filter(s => counts[s.id] > 0).map(s => ({ id: s.id, label: s.icon + " " + s.label }))];
+  box.innerHTML = "";
+  items.forEach(it => {
+    const c = document.createElement("div");
+    c.className = "chip" + (filter === it.id ? " active" : "");
+    c.textContent = it.label + " " + (counts[it.id] || 0);
+    c.onclick = () => { filter = it.id; render(); };
+    box.appendChild(c);
+  });
+}
+
+function matches(p) {
+  if (filter !== "all" && p.segment !== filter) return false;
+  if (query) {
+    const q = query.toLowerCase();
+    const hay = (p.name + " " + (p.desc||"") + " " + (p.owner||"") + " " + p.tasks.map(t=>t.text).join(" ")).toLowerCase();
+    if (!hay.includes(q)) return false;
+  }
+  return true;
+}
+
+function renderList() {
+  const list = $("list");
+  const shown = projects.filter(matches);
+  list.innerHTML = "";
+
+  if (shown.length === 0) {
+    list.innerHTML = `<div class="empty"><div class="big">🗂️</div><p>${projects.length===0?"No projects yet.<br>Tap the + button to add your first one.":"Nothing matches your filter."}</p></div>`;
+    return;
+  }
+
+  // group by segment
+  const order = SEGMENTS.map(s => s.id);
+  const groups = {};
+  shown.forEach(p => { (groups[p.segment] = groups[p.segment] || []).push(p); });
+  order.forEach(segId => {
+    const arr = groups[segId];
+    if (!arr) return;
+    const seg = segMap[segId];
+    const head = document.createElement("div");
+    head.className = "seg-head";
+    head.innerHTML = `${seg.icon} ${seg.label} <span class="count">${arr.length}</span>`;
+    list.appendChild(head);
+    // sort: priority high->low, then active first
+    arr.sort((a,b) => rank(b) - rank(a));
+    arr.forEach(p => list.appendChild(cardEl(p)));
+  });
+}
+
+function rank(p) {
+  const pr = { high: 3, med: 2, low: 1 }[p.priority] || 0;
+  const st = p.status === "active" ? 4 : p.status === "hold" ? 2 : p.status === "idea" ? 1 : 0;
+  return pr * 5 + st;
+}
+
+function cardEl(p) {
+  const seg = segMap[p.segment] || segMap.other;
+  const st = statMap[p.status] || STATUSES[0];
+  const pr = priMap[p.priority];
+  const total = p.tasks.length;
+  const done = p.tasks.filter(t => t.done).length;
+  const pct = total ? Math.round(done / total * 100) : 0;
+
+  const el = document.createElement("div");
+  el.className = "card";
+  el.style.setProperty("--barcolor", seg.color);
+  el.innerHTML = `
+    <div class="top">
+      <h3>${esc(p.name)}</h3>
+      <span class="badge" style="color:${st.color};background:${hexA(st.color,0.15)}"><span class="dot"></span>${st.label}</span>
+    </div>
+    ${p.desc ? `<div class="desc">${esc(p.desc)}</div>` : ""}
+    <div class="meta">
+      <span class="tag">${seg.icon} ${seg.label}</span>
+      ${pr ? `<span class="tag" style="color:${pr.color};border-color:${hexA(pr.color,0.4)}">▲ ${pr.label}</span>` : ""}
+      ${p.owner ? `<span class="owner">👤 ${esc(p.owner)}</span>` : ""}
+    </div>
+    ${total ? `
+    <div class="progress-wrap">
+      <div class="progress-row"><span>${done}/${total} tasks</span><span>${pct}%</span></div>
+      <div class="bar"><span style="width:${pct}%"></span></div>
+    </div>` : ""}
+  `;
+  el.onclick = () => openDetail(p.id);
+  return el;
+}
+
+/* ---------------- Detail ---------------- */
+function openDetail(id) {
+  viewingId = id;
+  const p = projects.find(x => x.id === id);
+  if (!p) return;
+  const seg = segMap[p.segment] || segMap.other;
+  const st = statMap[p.status] || STATUSES[0];
+  const pr = priMap[p.priority];
+  const body = $("detailBody");
+
+  body.innerHTML = `
+    <h2 style="font-size:22px;font-weight:800;line-height:1.2">${esc(p.name)}</h2>
+    <div class="detail-meta">
+      <span class="tag">${seg.icon} ${seg.label}</span>
+      <span class="badge" style="color:${st.color};background:${hexA(st.color,0.15)}"><span class="dot"></span>${st.label}</span>
+      ${pr ? `<span class="tag" style="color:${pr.color};border-color:${hexA(pr.color,0.4)}">▲ ${pr.label} priority</span>` : ""}
+    </div>
+    ${p.owner ? `<div style="color:var(--muted);font-size:14px;margin-bottom:6px">👤 ${esc(p.owner)}</div>` : ""}
+    ${p.desc ? `<p style="font-size:14.5px;line-height:1.55;color:#cbd5e1">${esc(p.desc)}</p>` : ""}
+    ${p.link ? `<div class="link-row"><button id="openLink">🔗 Open link</button></div>` : ""}
+
+    <div class="section-title">Tasks <span id="taskCount"></span></div>
+    <div id="taskList"></div>
+    <div class="add-task">
+      <input id="newTask" class="in" placeholder="Add a task…" />
+      <button id="addTaskBtn">＋</button>
+    </div>
+  `;
+  renderTasks(p);
+
+  if (p.link) $("openLink").onclick = () => { let u = p.link; if (!/^https?:\/\//i.test(u)) u = "https://" + u; window.open(u, "_blank"); };
+  $("addTaskBtn").onclick = () => {
+    const inp = $("newTask");
+    const v = inp.value.trim();
+    if (!v) return;
+    p.tasks.push(t(v));
+    inp.value = "";
+    save(); renderTasks(p); render();
+    inp.focus();
+  };
+  $("newTask").addEventListener("keydown", e => { if (e.key === "Enter") $("addTaskBtn").click(); });
+
+  openSheet("detailSheet");
+}
+
+function renderTasks(p) {
+  const wrap = $("taskList");
+  const done = p.tasks.filter(t=>t.done).length;
+  $("taskCount").textContent = p.tasks.length ? `(${done}/${p.tasks.length})` : "";
+  if (p.tasks.length === 0) { wrap.innerHTML = `<div style="color:var(--muted);font-size:13.5px;padding:10px 0">No tasks yet.</div>`; return; }
+  wrap.innerHTML = "";
+  p.tasks.forEach(task => {
+    const row = document.createElement("div");
+    row.className = "task" + (task.done ? " done" : "");
+    row.innerHTML = `<div class="check">✓</div><div class="tx">${esc(task.text)}</div><button class="del">✕</button>`;
+    row.querySelector(".check").onclick = () => { task.done = !task.done; save(); renderTasks(p); render(); };
+    row.querySelector(".del").onclick = () => { p.tasks = p.tasks.filter(x => x.id !== task.id); save(); renderTasks(p); render(); };
+    wrap.appendChild(row);
+  });
+}
+
+/* ---------------- Edit / Add ---------------- */
+function openEditor(id) {
+  editingId = id || null;
+  const p = id ? projects.find(x => x.id === id) : null;
+  draft = p
+    ? JSON.parse(JSON.stringify(p))
+    : { segment: "apps", status: "active", priority: "med" };
+
+  $("editTitle").textContent = p ? "Edit Project" : "New Project";
+  $("fName").value = p ? p.name : "";
+  $("fOwner").value = p ? (p.owner||"") : "";
+  $("fLink").value = p ? (p.link||"") : "";
+  $("fDesc").value = p ? (p.desc||"") : "";
+  $("editDelete").style.display = p ? "block" : "none";
+
+  buildOptions();
+  openSheet("editSheet");
+  setTimeout(() => $("fName").focus(), 300);
+}
+
+function buildOptions() {
+  // segments
+  const segBox = $("fSegments"); segBox.innerHTML = "";
+  SEGMENTS.forEach(s => {
+    const o = document.createElement("div");
+    o.className = "opt" + (draft.segment === s.id ? " sel" : "");
+    if (draft.segment === s.id) o.style.background = s.color;
+    o.textContent = s.icon + " " + s.label;
+    o.onclick = () => { draft.segment = s.id; buildOptions(); };
+    segBox.appendChild(o);
+  });
+  // status
+  const stBox = $("fStatus"); stBox.innerHTML = "";
+  const stGrid = document.createElement("div"); stGrid.className = "seg-grid";
+  STATUSES.forEach(s => {
+    const o = document.createElement("div");
+    o.className = "opt" + (draft.status === s.id ? " sel" : "");
+    if (draft.status === s.id) o.style.background = s.color;
+    o.textContent = s.label;
+    o.onclick = () => { draft.status = s.id; buildOptions(); };
+    stGrid.appendChild(o);
+  });
+  stBox.appendChild(stGrid);
+  // priority
+  const prBox = $("fPriority"); prBox.innerHTML = "";
+  const prGrid = document.createElement("div"); prGrid.style.display="grid"; prGrid.style.gridTemplateColumns="1fr"; prGrid.style.gap="8px";
+  PRIORITIES.forEach(s => {
+    const o = document.createElement("div");
+    o.className = "opt" + (draft.priority === s.id ? " sel" : "");
+    if (draft.priority === s.id) o.style.background = s.color;
+    o.textContent = s.label;
+    o.onclick = () => { draft.priority = s.id; buildOptions(); };
+    prGrid.appendChild(o);
+  });
+  prBox.appendChild(prGrid);
+}
+
+function saveEditor() {
+  const name = $("fName").value.trim();
+  if (!name) { $("fName").focus(); $("fName").style.borderColor = "var(--accent)"; toast("Give the project a name"); return; }
+  const data = {
+    name,
+    segment: draft.segment,
+    status: draft.status,
+    priority: draft.priority,
+    owner: $("fOwner").value.trim(),
+    link: $("fLink").value.trim(),
+    desc: $("fDesc").value.trim(),
+  };
+  if (editingId) {
+    const p = projects.find(x => x.id === editingId);
+    Object.assign(p, data);
+    toast("Project updated");
+  } else {
+    projects.unshift({ id: uid(), ...data, tasks: [] });
+    toast("Project added");
+  }
+  save(); render(); closeSheets();
+}
+
+function deleteProject() {
+  if (!editingId) return;
+  if (!confirm("Delete this project? This cannot be undone.")) return;
+  projects = projects.filter(x => x.id !== editingId);
+  save(); render(); closeSheets();
+  toast("Project deleted");
+}
+
+/* ---------------- Sheets ---------------- */
+function openSheet(id) {
+  $("scrim").classList.add("open");
+  $(id).classList.add("open");
+}
+function closeSheets() {
+  $("scrim").classList.remove("open");
+  $("editSheet").classList.remove("open");
+  $("detailSheet").classList.remove("open");
+}
+
+/* ---------------- Helpers ---------------- */
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c])); }
+function hexA(hex, a) {
+  const h = hex.replace("#",""); const n = parseInt(h.length===3 ? h.split("").map(c=>c+c).join("") : h, 16);
+  return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${a})`;
+}
+let toastTimer;
+function toast(msg) {
+  const el = $("toast"); el.textContent = msg; el.classList.add("show");
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => el.classList.remove("show"), 1900);
+}
+
+/* ---------------- Wire up ---------------- */
+$("fab").onclick = () => openEditor(null);
+$("scrim").onclick = closeSheets;
+$("editCancel").onclick = closeSheets;
+$("editSave").onclick = saveEditor;
+$("editDelete").onclick = deleteProject;
+$("detailClose").onclick = closeSheets;
+$("detailEdit").onclick = () => { const id = viewingId; closeSheets(); setTimeout(() => openEditor(id), 250); };
+$("search").addEventListener("input", e => { query = e.target.value; renderList(); });
+
+render();
+</script>
+</body>
+</html>
